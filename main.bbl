@@ -1,0 +1,92 @@
+\begin{thebibliography}{10}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Becker et~al.(2011)Becker, Coron, and Joux]{BCJ}
+Anja Becker, Jean-S{\'e}bastien Coron, and Antoine Joux.
+\newblock Improved generic algorithms for hard knapsacks.
+\newblock In \emph{Advances in Cryptology -- EUROCRYPT 2011}, volume 6632 of
+  \emph{Lecture Notes in Computer Science}, pages 364--385. Springer, 2011.
+\newblock \doi{10.1007/978-3-642-20465-4_21}.
+\newblock URL \url{https://eprint.iacr.org/2011/474}.
+
+\bibitem[Bonnetain et~al.(2020)Bonnetain, Bricout, Schrottenloher, and
+  Shen]{BBSS}
+Xavier Bonnetain, R{\'e}mi Bricout, Andr{\'e} Schrottenloher, and Yixin Shen.
+\newblock Improved classical and quantum algorithms for subset-sum.
+\newblock In \emph{Advances in Cryptology -- ASIACRYPT 2020}, volume 12492 of
+  \emph{Lecture Notes in Computer Science}, pages 633--666. Springer, 2020.
+\newblock \doi{10.1007/978-3-030-64834-3_22}.
+\newblock URL \url{https://arxiv.org/abs/2002.05276v4}.
+\newblock Full-text comparisons use arXiv:2002.05276v4, 10 November 2020.
+
+\bibitem[Brassard et~al.(2002)Brassard, H{\o}yer, Mosca, and Tapp]{BHMT}
+Gilles Brassard, Peter H{\o}yer, Michele Mosca, and Alain Tapp.
+\newblock Quantum amplitude amplification and estimation.
+\newblock In \emph{Quantum Computation and Information}, volume 305 of
+  \emph{Contemporary Mathematics}, pages 53--74. American Mathematical Society,
+  2002.
+\newblock \doi{10.1090/conm/305/05215}.
+\newblock URL \url{https://arxiv.org/abs/quant-ph/0005055v1}.
+\newblock Theorem numbering follows arXiv version 1.
+
+\bibitem[Cover and Thomas(2006)]{CT06}
+Thomas~M. Cover and Joy~A. Thomas.
+\newblock \emph{Elements of Information Theory}.
+\newblock Wiley, 2 edition, 2006.
+\newblock \doi{10.1002/047174882X}.
+
+\bibitem[Hhan et~al.(2026)Hhan, Kim, Kim, and Laarhoven]{HKKL}
+Minki Hhan, Jiseung Kim, Sunyeop Kim, and Thijs Laarhoven.
+\newblock Superlattice methods for the shortest vector problem and discrete
+  {Gaussian} sampling.
+\newblock Cryptology ePrint Archive, Paper 2026/2761, 2026.
+\newblock URL \url{https://eprint.iacr.org/2026/2761}.
+\newblock Preprint first posted 4 November 2026; version updated 9 November
+  2026.
+
+\bibitem[Howgrave-Graham(2026)]{HG26}
+Nick Howgrave-Graham.
+\newblock Filtered merges make deeper representation trees pay: {Subset Sum}
+  and {Meet-LWE}.
+\newblock Cryptology ePrint Archive, Paper 2026/2802, November 2026.
+\newblock URL \url{https://eprint.iacr.org/2026/2802}.
+\newblock Preprint dated 6 November 2026.
+
+\bibitem[Howgrave-Graham and Joux(2010)]{HGJ}
+Nick Howgrave-Graham and Antoine Joux.
+\newblock New generic algorithms for hard knapsacks.
+\newblock In \emph{Advances in Cryptology -- EUROCRYPT 2010}, volume 6110 of
+  \emph{Lecture Notes in Computer Science}, pages 235--256. Springer, 2010.
+\newblock \doi{10.1007/978-3-642-13190-5_12}.
+\newblock URL \url{https://eprint.iacr.org/2010/189}.
+
+\bibitem[Li(2025)]{Li}
+Yang Li.
+\newblock From {Subset-Sum} to decoding: Improved classical and quantum
+  algorithms via ternary representation technique.
+\newblock \emph{Information}, 16\penalty0 (10):\penalty0 887, 2025.
+\newblock \doi{10.3390/info16100887}.
+\newblock URL \url{https://www.mdpi.com/2078-2489/16/10/887}.
+
+\bibitem[Li and Li(2020)]{LiLi}
+Yang Li and Hongbo Li.
+\newblock Improved quantum algorithm for the random subset sum problem, 2020.
+\newblock URL \url{https://arxiv.org/abs/1912.09264}.
+\newblock Version 2, 13 February 2020; first submitted 18 December 2019. The
+  PDF title is ``A New Quantum Algorithm for the Random Subset Sum Problem''.
+
+\bibitem[Magniez et~al.(2011)Magniez, Nayak, Roland, and Santha]{MNRS}
+Fr{\'e}d{\'e}ric Magniez, Ashwin Nayak, J{\'e}r{\'e}mie Roland, and Miklos
+  Santha.
+\newblock Search via quantum walk.
+\newblock \emph{SIAM Journal on Computing}, 40\penalty0 (1):\penalty0 142--164,
+  2011.
+\newblock \doi{10.1137/090745854}.
+\newblock URL \url{https://arxiv.org/abs/quant-ph/0608026v4}.
+\newblock Theorem numbering follows arXiv version 4.
+
+\end{thebibliography}

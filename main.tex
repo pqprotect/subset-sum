@@ -1,0 +1,1364 @@
+\documentclass[10pt,a4paper]{article}
+\pdfinfoomitdate=1
+\pdftrailerid{}
+\pdfsuppressptexinfo=-1
+\usepackage[margin=29mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype,amsmath,amssymb,amsthm,booktabs,array,graphicx}
+\pdfmapfile{+lm.map}
+\pdfmapfile{+symbols.map}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+ pdftitle={Faster Algorithms for Subset Sum using Filtered Representation Trees},
+ pdfauthor={},pdfsubject={},pdfkeywords={},pdfcreator={},pdfproducer={}
+}
+\usepackage[numbers,sort&compress]{natbib}
+\setlength{\emergencystretch}{1.5em}
+\Urlmuskip=0mu plus 1mu
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newcommand{\HH}{\mathsf H}
+\newcommand{\pos}[1]{[#1]_+}
+\newcommand{\poly}{\operatorname{poly}}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\E}{\mathbb E}
+\newcommand{\Prob}{\mathbb P}
+\title{\bfseries Faster Algorithms for Subset Sum \\using Filtered Representation Trees}
+\author{Samuel J. Adams\textsuperscript{1} \quad Luis Iglesias\textsuperscript{1}\\[0.35em]
+{\small\textsuperscript{1}PQProtect Inc., USA}\\[0.35em]
+{\footnotesize\texttt{samuel.j.adams80@gmail.com}\quad\texttt{luisiglesias.vigo@outlook.com}}}
+\date{\today}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study filtered representation algorithms for random planted subset sum
+on $n$ input numbers at density one. Within the binary representation-tree
+frameworks compared here, we conditionally improve the classical running
+time from $2^{0.2690n+o(n)}$ of
+Howgrave-Graham~\cite[Theorem~7]{HG26} to $2^{0.2634n+o(n)}$.
+With quantum access to classical memory (QRACM), the running time improves
+from $2^{0.2356n+o(n)}$~\cite[Section~4.3 and Table~2]{BBSS} to
+$2^{0.2100n+o(n)}$. With quantum access to quantum memory (QRAQM),
+it improves from $2^{0.2156n+o(n)}$~\cite[Section~5.3]{BBSS} to
+$2^{0.1980n+o(n)}$. For each new construction, total space satisfies
+the same upper bound as running time. The constructions combine
+coordinate-dependent representation laws with type-class filtering and
+cost models adapted to their search engines. The quantum-memory
+construction uses one common size for all nonroot lists, so its remaining
+resource rates follow from short entropy formulas. We derive every
+source, index, candidate and reporting cost and verify the three finite
+profiles using directed interval calculations. The classical and
+quantum-search bounds require assumptions on recursive list
+distributions, survival and access. The quantum-memory bound further
+requires a coherent-update and hard-workspace interface, whose validity
+is not implied by an ordinary expected update count.
+\end{abstract}
+
+\let\thefootnote\relax\footnotetext{Supplementary material is available at \texttt{https://github.com/pqprotect/subset-sum}.}
+
+\section{Introduction}
+Subset sum asks which numbers in a given collection add up to a specified
+target. The question is elementary, but large instances can be difficult:
+the number of possible subsets grows exponentially with the input size.
+The problem is a basic example in the study of exact algorithms, and its
+random instances also provide a useful test for techniques developed in
+cryptanalysis. Improvements often carry over to related search problems,
+including decoding and learning problems.
+
+A central idea is to give a solution many descriptions. Instead of
+splitting a binary solution into two disjoint parts, a representation
+algorithm allows partial vectors with additional digits, including
+negative ones. Many pairs of partial vectors can then describe the same
+solution. A tree of such representations creates room for extra modular
+constraints, which keep the intermediate lists manageable. The challenge
+is to preserve enough descriptions of a solution while paying for every
+partial vector and every pair that is tested.
+
+Filtering addresses a second source of work. Two partial vectors may
+satisfy a modular equation but still have incompatible coordinate
+patterns. A filter organizes the lists so that fewer such pairs are
+examined. Its value depends on how it is used: building an index,
+reporting an entire output list and finding a single partner have
+different costs. Quantum search changes some of these costs, while
+leaving the cost of writing a classical table unchanged. This paper
+studies that interaction for three computational models.
+
+\subsection{Related work}
+Representation algorithms for hard random subset sum were introduced by
+Howgrave-Graham and Joux~\cite{HGJ}, who obtained running time
+$2^{0.3370n+o(n)}$
+by allowing many decompositions of a solution. Becker, Coron and
+Joux~\cite{BCJ} introduced signed representations and obtained numerical
+time and space bounds of approximately $2^{0.2909n+o(n)}$. Their Theorem~2 also
+gives a formal almost-all-instances guarantee: for every fixed
+$\varepsilon>0$, a fraction at least $1-140\cdot2^{-\varepsilon n}$ of
+their equibalanced instances of density below one admits the modified
+algorithm in time $\widetilde O(2^{(0.2910+3\varepsilon)n})$.
+That guarantee concerns their instance distribution and construction;
+it does not establish the class-dependent load assumptions used here.
+
+Under a standard list heuristic, Bonnetain, Bricout, Schrottenloher and
+Shen (BBSS)~\cite{BBSS} extended
+the representation alphabet to include the digit $2$ and obtained
+classical running time $2^{0.2830n+o(n)}$. Their quantum algorithms distinguish two
+memory models. In QRACM, a quantum computation can read a classical
+stored table coherently; their quantum-search construction gives time
+and space $2^{0.2356n+o(n)}$~\cite[Section~4.3 and Table~2]{BBSS}.
+In QRAQM, the stored data may also be quantum. Their representation walk
+runs in time $2^{0.2156n+o(n)}$ and uses space $2^{0.2110n+o(n)}$
+under an additional
+update heuristic~\cite[Section~5.3]{BBSS}. Their alternative construction
+removes that heuristic with time and space $2^{0.2182n+o(n)}$, while
+retaining the classical list heuristic~\cite[Section~6.4]{BBSS}.
+BBSS explicitly distinguish a correct list count from the stronger
+requirements of an efficient coherent walk update.
+
+The directly related classical filtering result is Howgrave-Graham's
+analysis of type-class bucketing in representation trees~\cite{HG26}.
+Its heuristic Theorem~7 gives running time $2^{0.2690n+o(n)}$ at depth
+five. The filters
+avoid generating many modularly matched pairs with the wrong split
+pattern; their benefit makes deeper trees useful. Our classical result
+extends this filtered binary-tree construction by choosing the useful
+and filter laws jointly across two coordinate classes. The use of
+representations, type-class filters and deeper trees is already present
+in this earlier work.
+
+Directed indices and implicit queries also occur in the lattice
+algorithms of Hhan, Kim, Kim and Laarhoven~\cite[Lemmas~8.3 and~8.4]{HKKL}.
+They motivate the distinction between data writes, query search and
+all-output reporting used here. Their lattice distribution and success
+arguments do not establish the corresponding properties of subset-sum
+lists. Our precise task is planted balanced modular subset sum; the comparison
+concerns the random density-one representation frameworks and keeps
+their respective guarantees distinct. Other analyses report smaller
+running times, including quantum time $2^{0.2090n+o(n)}$
+in~\cite{LiLi}, and classical
+time $2^{0.2400n+o(n)}$ and quantum time $2^{0.1843n+o(n)}$
+in~\cite{Li}. Their representation-counting and ternary-join
+analyses do not supply the particular binary-tree cost and access
+interfaces used here. We do not claim an unrestricted record
+across those different analyses.
+
+\subsection{Contributions}
+We give three profiled constructions and complete conditional analyses
+for random planted balanced modular subset sum at density one. The
+precise problem distribution is defined in Section~\ref{sec:preliminaries}.
+Time counts preprocessing and table construction; space counts all
+exponentially large lists, indices and temporary storage. The assumptions
+are stated formally before the cost derivations.
+
+\begin{theorem}[Classical bound]\label{thm:classical}
+Under the recursive-list and survival assumption
+(Assumption~\ref{ass:lists}) and the classical access conditions in
+Assumption~\ref{ass:access}, the specified classical construction has
+constant success probability and time and total space
+\[
+ T_C,S_C\le 2^{0.2634n+o(n)}.
+\]
+\end{theorem}
+
+This extends the usual random-list heuristic to the actual
+class-dependent, filtered recursive lists: modular loads, candidate
+counts and solution survival must hold jointly for that construction.
+The premise has the same purpose as the classical list hypotheses in
+BBSS and Howgrave-Graham, but we do not prove that their formulations
+imply ours. The independent uniform input coefficients, fresh split
+offsets and uniformly sampled source subsets provide concrete sources
+of randomization. The checked capacities exclude profiles that demand
+more vectors than the underlying type domains contain. Exact type
+counts and an explicit covering construction
+justify the local probabilities. Once the actual candidate counts are
+given, classical indexing, bucket scans and deduplication are constructive.
+The unresolved part is the distribution and survival of the correlated
+recursive lists. The theorem therefore remains conditional.
+
+\begin{theorem}[QRACM bound]\label{thm:qracm}
+Under Assumption~\ref{ass:lists} and the reversible padded-query,
+occurrence and reporting conditions in Assumption~\ref{ass:access},
+the specified QRACM construction has constant success probability and
+\[
+ T_Q,S_Q<2^{0.2100n+o(n)}.
+\]
+All exponentially large persistent storage is classical.
+\end{theorem}
+
+This construction requires no coherent updates of its stored lists.
+Its additional issue is preparing and searching the correct implicit
+occurrence states. The required padding bounds and occurrence control
+are properties of the actual filtered queries, and are not consequences
+of amplitude amplification alone. The product-type structure and exact
+static bucket navigation provide concrete parts of the access
+implementation. Uniform padding and recursive survival remain
+unproved profile-specific requirements. We do not claim that the new
+QRACM premises follow merely from the list heuristic used in the BBSS
+construction.
+
+\begin{theorem}[QRAQM bound]\label{thm:qraqm}
+Under Assumption~\ref{ass:lists}, the coherent canonical setup and access
+conditions in Assumption~\ref{ass:access}, and the effective-update and
+hard-workspace conditions in Assumption~\ref{ass:updates}, the specified
+QRAQM construction has constant success probability and
+\[
+ T_W,S_W<2^{0.1980n+o(n)}.
+\]
+\end{theorem}
+
+The quantum-memory statement uses a substantially stronger hypothesis
+than static list counting. A source exchange must admit a canonical
+coherent update, its inverse, the required root test and extraction,
+with controlled error and a hard space bound. The charged update
+exponent is suggested by typed expected-work estimates. Turning those
+estimates into the full operational interface is an outstanding step;
+an ordinary classical mean does not prove it. The assumption is
+analogous in purpose to the update heuristic used for the BBSS running time
+$2^{0.2156n+o(n)}$, but no equivalence is established. It is an additional
+requirement relative to their construction running in time
+$2^{0.2182n+o(n)}$, which avoids that heuristic. Thus the faster running time relies on a stronger unresolved quantum
+implementation requirement.
+
+The three proofs appear in Sections~\ref{sec:classical},
+\ref{sec:qracm} and~\ref{sec:qraqm}. Each gives the algorithm, the full
+resource expressions and a finite rational profile with positive margins.
+Exact type-flow checks and directed interval calculations establish the
+numerical inequalities; they do not
+validate the distributional or coherent-update assumptions. No empirical
+validation of those assumptions is claimed.
+
+\subsection{Techniques}
+\paragraph{Coupling different coordinate laws in one search.}
+A single coordinate distribution need not serve the whole vector. We use
+two equally sized coordinate groups and allow them to favor different
+digits and split patterns. Both groups still belong to the same partial
+vector and the same modular equation. Their combined cost can therefore
+balance expensive and inexpensive representation choices before the
+largest cost is selected. In the two root subtrees the profiles are
+exchanged, preserving a shared whole-vector description. This enlarges the profile family available to the optimization. The
+reported bounds use jointly chosen useful splits and filters in that
+family. They change the probability laws of the construction, not only
+the number of modular bits at each level.
+
+\paragraph{Pricing data writes and query search separately.}
+A useful-pair predicate can be symmetric even when an efficient quantum
+filter should be directed. Copying an entry into more data buckets costs
+linear work. Visiting more query addresses can instead benefit from
+quantum search. We choose the two incidence conditions with these
+separate prices in mind: accepting a larger query search can be worthwhile
+if it reduces the number of stored copies. This read/write distinction
+is inherited from directed filtering techniques such as~\cite{HKKL}.
+Here it is integrated into every relevant subset-sum merge and into the
+joint choice of representation laws. The index writes remain charged
+in full.
+
+\paragraph{Choosing which lists to materialize.}
+The three search engines pay for different objects. The classical
+algorithm constructs both incidence tables and checks every candidate.
+The QRACM construction materializes sibling subtrees once and searches
+one implicit path using nested amplitude amplification. Its stored merges
+must still report all their outputs. In QRAQM, a changed source element
+triggers searches against maintained data indices. Separating these
+operations prevents a one-solution search cost from being used for the
+construction of an entire list, or an expected output count from being
+used as the cost of finding the outputs. The resulting accounting permits
+different useful filters and rate balances in the three models.
+
+\paragraph{Preserving global types through small local filters.}
+Small product filters make incidence decoding efficient, but requiring
+one fixed pattern in every block can discard valid global
+representations. We use a subexponential collection of compatible block
+patterns and verified local codebooks. Every useful global pair has a
+pattern in that collection, and its canonical first common address can
+be tested efficiently. The product-code principle is already present
+in~\cite[Proposition~5]{HG26}; the construction here gives simultaneous
+coverage of every prescribed global useful pair. This makes the static
+filter implementation explicit without treating recursive list
+independence as a consequence of local coverage.
+
+\paragraph{A common list height for the quantum walk.}
+Every nonroot list in the selected QRAQM profile has the same size
+exponent. The modular constraints are chosen to preserve that size from
+one merge to the next. The propagation accounting then has no ratio between
+parent and child list sizes, and the parameter choice becomes easy to
+describe: the height and update rate come from two
+information quantities at one merge level, and all other rates follow.
+This is a property of the selected witness, not a general theorem that
+equal heights are always optimal. Nor does it control update tails or
+supply a coherent implementation; those are precisely the extra
+requirements in Theorem~\ref{thm:qraqm}.
+
+The constants are certified at finite probability laws. Exact zero
+channel cells are retained as zeros, type-flow identities are checked
+over the rationals, and nonstructural inequalities have fixed positive
+margins. This makes the claimed bounds independent of optimizer
+trajectories and displayed decimal rounding, while keeping numerical
+feasibility distinct from the assumptions needed by the algorithms.
+
+\subsection{Outlook}
+The three constructions show how a more flexible representation profile
+and careful model-dependent filtering costs can improve the exponents
+within this framework. The principal open questions concern the
+assumptions: proving load and survival estimates for the filtered
+recursive lists, and constructing the canonical coherent updates needed
+for the quantum-memory target. The explicit profiles provide fixed
+objects for such analysis and for experimental study. Further numerical
+optimization may refine the constants, but resolving these proof
+obligations would give a more substantial improvement in the strength
+of the results.
+
+
+
+\section{Preliminaries}\label{sec:preliminaries}
+\subsection{Problem, rates and notation}
+For even $n$, put $M=2^n$. Choose $a_1,\ldots,a_n$ independently and
+uniformly from $\mathbb Z_M$, choose an independent uniform binary vector
+$e$ of weight $n/2$, and put $t=\langle a,e\rangle\pmod M$.
+Given $(a,t)$, the task is to return any binary solution. A rate $c$
+means $2^{cn+o(n)}$ operations or stored words of polynomial bit length.
+Depths, alphabets and numbers of coordinate classes are fixed as $n$ grows.
+Classical memory permits ordinary random access. QRACM permits coherent
+reads of classical tables; QRAQM also permits coherent quantum stored data.
+
+All logarithms are base two, $\HH$ is Shannon entropy, and $0\log0=0$.
+For a fixed coordinate partition, $W$ denotes the class of a uniform
+coordinate. Conditional entropies given $W$ are weighted averages over
+those classes. A prescribed empirical distribution is called a type.
+
+
+\subsection{Counting and quantum algorithm primitives}
+\label{sec:imported-primitives}
+
+We record the counting and quantum algorithm results used in the cost
+analysis. A quantum cost includes each indicated operation and its inverse;
+an addressable table is charged separately when it is constructed or stored.
+These results do not assert that the recursively generated subset-sum lists
+have the load or coherence properties required by those operations.
+
+\begin{lemma}[Type-class sizes {\cite[Theorem~11.1.3]{CT06}}]
+\label{lem:type-size}
+Let $p$ be an $n$-type on a fixed finite alphabet $\mathcal A$.
+For its type class $T_n(p)$,
+\[
+ (n+1)^{-|\mathcal A|}2^{n\HH(p)}
+ \leq |T_n(p)|\leq 2^{n\HH(p)}.
+\]
+In particular, $|T_n(p)|=2^{n\HH(p)+O(\log n)}$.
+For a fixed number of coordinate classes, the product of their type classes
+has rate $\HH(X\mid W)$, where $W$ identifies the class.
+\end{lemma}
+The conditional pair counts used below follow by applying the multinomial
+formula within each class and, when the parent is fixed, within each parent
+symbol. We give these particular counts in Lemma~\ref{lem:type-counts};
+they do not require a distributional assumption on algorithmically
+generated lists.
+
+\begin{lemma}[Amplitude amplification
+  {\cite[Theorems~3 and~4]{BHMT}}]
+\label{lem:amplitude-amplification}
+Let a measurement-free algorithm $A$ prepare a state whose projection onto
+a reversibly testable good subspace has squared norm $p>0$.
+When $p$ is known, amplitude amplification uses $O(p^{-1/2})$ applications
+of $A$, $A^{-1}$ and the good-state test to prepare its normalized good
+component coherently, using the exact final rotation of Theorem~4.
+When $p$ is unknown, the measured search of Theorem~3 finds a good outcome
+using an expected $O(p^{-1/2})$ such applications.
+\end{lemma}
+The coherent statement requires the preparation circuit, its inverse and
+the good-state phase test. It preserves relative amplitudes of accepted
+addresses. Thus uniform candidate addresses give uniform accepted
+\emph{occurrences}; different occurrences can still encode the same vector.
+The measured unknown-$p$ algorithm is not a clean state-preparation
+interface for a nested quantum procedure. The access assumption below
+specifies the preparations actually needed in that setting.
+
+\begin{lemma}[Quantum reporting on an implicit tree
+  {\cite[Lemma~8.4]{HKKL}}]
+\label{lem:tree-reporting}
+Let a fixed binary tree have $S$ vertices, depth $2^{o(n)}$ and
+$D_{\rm out}$ qualifying leaves. Suppose that its edges can be navigated
+and its leaves tested reversibly in $2^{o(n)}$ work per operation.
+Then all qualifying leaves can be reported with bounded error in
+\[
+ 2^{o(n)}\sqrt{S(D_{\rm out}+1)}
+\]
+work, apart from separately charged index construction and output writes.
+One qualifying leaf can be found, or their absence established, in
+$2^{o(n)}\sqrt S$ work. The tree size need not be known beforehand.
+Auxiliary workspace is $2^{o(n)}$, apart from the stored access data and
+reported output records.
+\end{lemma}
+The tree must include the vertices needed to reach candidates, including
+queries whose buckets are empty; counting only accepted pairs is
+insufficient. For random trees the pointwise bound and Cauchy--Schwarz give
+\[
+ \mathbb E\sqrt{S(D_{\rm out}+1)}
+ \leq\sqrt{\mathbb ES\;\mathbb E(D_{\rm out}+1)}.
+\]
+No independence between these two counts is needed. This lemma gives a
+reporting algorithm with measured output records. It does not give a
+canonical coherent superposition of all output lists, which is an
+additional requirement for the QRAQM setup.
+
+\begin{lemma}[Product-Johnson spectral gap
+  {\cite[Definition~4 and Theorem~2]{BBSS}}]
+\label{lem:johnson-gap}
+Let $J(N,R)$ have the $R$-subsets of $\{1,\ldots,N\}$ as vertices;
+one step exchanges a uniformly chosen member with a uniformly chosen
+nonmember. Fix a constant number $q$ of factors. On the Cartesian product
+$\prod_{i=1}^qJ(N_i,R)$, choose one factor uniformly for the exchange and
+make the walk lazy with probability $1/2$.
+If $R=o(\min_iN_i)$, its spectral gap is $\Theta(1/R)$.
+In particular, $R=2^{hn+o(n)}$ gives gap $2^{-hn+o(n)}$.
+\end{lemma}
+For one factor the exchange-chain gap is $N/[R(N-R)]$; taking a constant
+number of factors and adding laziness changes it by constant factors.
+Deterministic auxiliary data attached canonically to every product vertex
+do not change this underlying Markov chain. Whether such data can be
+maintained coherently at the claimed cost is a separate algorithmic
+requirement.
+
+\begin{lemma}[Quantum-walk search
+  {\cite[Theorem~3]{MNRS}}]
+\label{lem:mnrs}
+Let $P$ be a finite reversible ergodic Markov chain with spectral gap
+$\delta>0$. Suppose that, whenever a marked state exists, its stationary
+marked mass is at least $\varepsilon>0$.
+Assume actual coherent implementations of stationary setup with canonical
+state data, the forward and reverse walk updates and their inverses, and
+the marked-state phase test. If these have uniform costs
+$T_{\rm setup},T_{\rm up},T_{\rm check}$, respectively, then a marked
+state can be found, or their absence detected, with bounded error at cost
+\[
+ O\!\left(T_{\rm setup}+
+ \frac{1}{\sqrt\varepsilon}
+ \left(\frac{T_{\rm up}}{\sqrt\delta}+T_{\rm check}\right)\right).
+\]
+\end{lemma}
+This is the fixed-cost walk theorem. In particular it does not replace
+$T_{\rm up}$ by the expected cost of an ordinary classical update, and it
+does not by itself give a hard workspace bound. Our QRAQM update assumption
+asks for an operational effective-update analogue of this scaling and
+states its workspace requirement explicitly. A negligible checking rate
+also requires that the canonical marked flag be maintained by the charged
+updates. The displayed theorem explains the gap and marked-mass factors;
+the stronger update interface remains conditional.
+
+
+
+\section{Shared representation framework}\label{sec:framework}
+\subsection{Compatible types and modular constraints}
+In a binary representation tree, every parent vector is the integer
+coordinatewise sum of its children. The root type assigns mass $1/2$
+to each of $0$ and $1$. Child digits may be negative or repeated.
+A useful law $Q(X,Y)$ prescribes the full joint type of two children;
+its marginals and sum law must equal their child and parent types.
+The useful predicate tests $Q$, not just the parent sum type.
+
+Partition the coordinates into classes $C_w$ of fixed rational proportions
+$\lambda_w$, and prescribe a type within each class. Write $W$ for the
+class of a uniform coordinate. All logarithms are base two and
+$0\log0=0$. By Lemma~\ref{lem:type-size}, a fixed-alphabet type class has size
+\[
+ |T_n(p)|=\frac{n!}{\prod_a(np(a))!}
+       =2^{n\HH(p)+O(\log n)}.
+\]
+The classwise product has entropy rate $\HH(X\mid W)$.
+Thus every entropy or information quantity below is conditioned on $W$;
+we average its classwise values before taking a cost maximum.
+
+\begin{lemma}[Useful-pair counts]\label{lem:type-counts}
+The fraction of independent uniform marginal-type vectors with joint
+law $Q$ is $2^{fn+O(\log n)}$, where
+\[
+ f=\HH(X,Y\mid W)-\HH(X\mid W)-\HH(Y\mid W)
+   =-I(X;Y\mid W).
+\]
+For a fixed parent $s$ of the required sum type, the number of its
+useful decompositions has rate
+$\HH(X,Y\mid W)-\HH(X+Y\mid W)$.
+\end{lemma}
+\begin{proof}
+The number of ordered pairs of type $Q$ is the multinomial coefficient
+$n!/\prod_{a,b}(nQ(a,b))!$. Divide by the two marginal type-class sizes.
+For a fixed parent, distribute the pair symbols among its positions of
+each sum symbol $u$, giving
+$\prod_u (nQ_{X+Y}(u))!/\prod_{a+b=u}(nQ(a,b))!$.
+Apply Stirling's formula separately in every coordinate class.
+\end{proof}
+When a symmetric law is encoded as unordered masses $q_{\{a,b\}}$,
+its ordered masses are $q_{\{a,b\}}/2$ off the diagonal. In particular
+$\HH(Q)=\HH(q)+\sum_{a<b}q_{\{a,b\}}$; this orientation term is retained
+in the entropy calculations.
+
+A cumulative modular rate $c$ means a constraint modulo
+$2^{cn+o(n)}$ on the scalar product of the whole vector with $a$.
+Offsets are chosen from the root downwards. At each split the left
+residue is uniform at the children's common modulus, and the right
+residue is the parent's residue minus it at that modulus. Distinct
+splits use independent seeds. These offsets and the filter family are
+fixed during an execution or quantum walk. Source-support partitions
+are refined with the coordinate classes and carry the corresponding
+proportional types. A random coordinate permutation makes the planted
+binary vector balanced in each fixed cell with only a polynomial loss.
+
+Exact probability tables are used on admissible lengths. The required
+divisibility modulus is constant because the profiles are fixed. For
+other lengths, a bounded number of coordinates can be guessed separately;
+a random permutation makes the remaining root balanced with constant
+probability. The resulting bounded difference in modulus bit length
+costs only a constant factor. Rounding realized list sizes and modular
+bit lengths contributes $o(n)$ to the rates, tolerated by the fixed
+positive resource margins.
+
+\subsection{Typed filters and their implementation}
+A filter is an extension $R(X,Y,Z\mid W)$ of a useful law $Q$.
+For a center of type $R_Z$, query and data incidence test the prescribed
+$XZ$ and $YZ$ marginal types. Define
+\[
+ \alpha=I(X;Z\mid W),\quad \beta=I(Y;Z\mid W),\quad
+ \kappa=I(XY;Z\mid W),
+\]
+\[
+ d=I(X;Z\mid Y,W),\quad q=I(Y;Z\mid X,W),\quad
+ r=I(X;Y\mid Z,W).
+\]
+The chain rule gives
+\begin{equation}
+ d=\kappa-\beta,\quad q=\kappa-\alpha,\quad
+ \kappa-\alpha-\beta=f+r,
+ \qquad \kappa=-f+d+q-r.
+ \label{eq:filter-identities}
+\end{equation}
+A constant label has $\alpha=\beta=\kappa=d=q=0$, while $r=-f$.
+
+\begin{lemma}[Typed filter cover and static access; product construction following {\cite[Proposition~5]{HG26}}]
+\label{lem:filter-access}
+For fixed finite rational $R$, subexponential verified preprocessing
+constructs an implicitly addressed filter family with at most
+$2^{\kappa n+o(n)}$ addresses. It covers every useful pair and has at most
+$2^{qn+o(n)}$ query incidences and $2^{dn+o(n)}$ data incidences per vector.
+Incidences can be enumerated and a pair's first common address tested
+with $2^{o(n)}$ overhead. A static list of $N$ data occurrences has an
+index of $N2^{dn+o(n)}$ records with exact reversible bucket counts and
+selection by rank. For static child lists, let $N_X$ be the number of
+query occurrences, $I_X$ their total incident addresses and $C$ the
+actual bucket-candidate visits. The candidate domain has a fixed binary
+tree of polynomial depth and size at most
+$2^{o(n)}(1+N_X+I_X+C)$, with reversible edge navigation and leaf tests
+costing $2^{o(n)}$. These claims concern static navigation, not the
+occupancies of recursively generated lists or coherent dynamic updates.
+\end{lemma}
+\begin{proof}
+We give the construction within one coordinate class; a fixed number
+of classes is handled by products. Split it into blocks of length
+$b=\lceil(\log_2 n)^2\rceil$, allowing one shorter block.
+Write $B(z\mid x,y)=R(x,y,z)/Q(x,y)$ on positive cells. Enumerate the
+integer block-table patterns $m_t(x,y,z)$ with global sum $nR$ and
+\[
+ |m_t(x,y,z)-m_t(x,y)B(z\mid x,y)|\le1.
+\]
+There are at most $(b+1)^{O(n/b)}=2^{o(n)}$ patterns.
+Every global useful pair admits one: for each $(x,y)$, the fractional
+matrix $m_t(x,y)B(z\mid x,y)$ has integral row and column margins.
+After taking floors, an integral bipartite flow rounds its residual
+entries within one while preserving those margins. Zero cells remain zero.
+Thus the construction covers global types without imposing one fixed
+block pattern on every useful pair.
+
+For a pattern let $R_t=m_t/n_t$ and $\overline R_t=(R_t)_{XY}B$.
+Their averaged entropy features differ by $o(1)$, uniformly over patterns.
+Under $\overline R$, the block index $T$ satisfies $Z\perp T\mid XY$,
+so conditioning gives
+\[
+ I(XY;Z\mid T)\le\kappa,\quad
+ I(X;Z\mid Y,T)\le d,\quad I(Y;Z\mid X,T)\le q.
+\]
+These inequalities bound the sums of local family and incidence exponents.
+
+For each local integer table, let $p_{XY}$ be the exact probability that
+a uniform local center gives its triple type for a fixed useful pair;
+let $p_X,p_Y$ be its marginal incidence probabilities. Sample
+$\lceil b^3/p_{XY}\rceil$ center IDs, permitting repeated strings.
+A fixed pair is missed with probability at most $e^{-b^3}$.
+Because $p_X,p_Y\ge p_{XY}$, Chernoff bounds give uniform incidence
+bounds of twice their expectations plus a constant. A union bound over
+all local strings, pairs and polynomially many tables succeeds.
+Exhaustive local enumeration verifies coverage and incidence bounds in
+$2^{O(b)}=2^{o(n)}$ time and space; failed samples are discarded.
+Exact conditional type counts show local family rate $n_t\kappa_t$
+and query/data incidence rates $n_tq_t,n_td_t$, up to $O(\log b)$.
+
+Take the product of local codebooks for each pattern and the disjoint
+union over patterns. An address is its pattern and local ID tuple.
+The preceding bounds prove the three global rates. Refined local
+incidences imply the original global marginal predicates, and the
+rounding argument ensures every useful pair has a common address.
+Mixed-radix enumeration of local incidence lists gives the stated
+navigation. To select the first common address, scan the subexponentially
+many patterns and their local codebooks for their least common IDs.
+This costs $2^{o(n)}$ and has a clean reversible implementation.
+
+For a static data list, enumerate incidences and sort records by pattern,
+center tuple, modular key and occurrence ID. Every nonempty bucket is
+an interval; binary searches find its endpoints, subtraction gives its
+count and an offset implements selection by rank. Empty buckets return
+zero and a dummy value. All keys have polynomial bit length. Read-only
+queries and their inverses require polynomially many QRACM reads; sorting
+and storage cost $N2^{dn+o(n)}$. No aggregate table over query prefixes is
+constructed.
+
+The candidate tree first chooses a query occurrence, then a pattern and
+its local center IDs, and finally a rank in the actual terminal bucket.
+Encode these choices by binary rank trees. Each stage has polynomial
+bit length, and local incidence lists or the terminal bucket endpoints
+supply its children reversibly. Empty patterns and buckets are retained
+as rejecting headers. The vertex count is at most a polynomial factor times
+$1+N_X+I_X+C$, including rejecting and empty query-address headers. Testing a leaf
+checks its useful type and first common address. Thus the resulting
+fixed static tree satisfies Lemma~\ref{lem:tree-reporting}; no totals below
+a partially specified query-center prefix are needed.
+\end{proof}
+The incidence predicates may be refined by these block patterns.
+The list/load assumption below applies to this actual construction.
+Its exponentially large global family charge $\kappa$ is conservatively
+retained in every resource bound. Canonical centers remove duplicate
+filter witnesses, but not different source pairs producing the same
+parent vector. Quantum reporting, actual padded loads and coherent
+canonical setup have the separate interfaces stated next.
+
+\subsection{Algorithmic assumptions}
+\label{sec:assumptions}
+Exact type counts and the static filter construction do not make the
+recursive lists independent. The following assumptions specify the
+additional properties used in the three proofs. They concern only the
+three fixed profiles and the source, offset and filter constructions
+used here. They are not assertions about every admissible probability law.
+
+\begin{assumption}[Recursive lists, loads and survival]
+\label{ass:lists}
+For the specified construction, conditioning a type domain of rate $h$
+on $c$ modular bits per coordinate gives the modeled rate $h-c$.
+A useful-pair predicate contributes its exact exponent $f$, and a fresh
+modular condition of rate $\Delta$ contributes $-\Delta$ to the merge
+count. These estimates hold for the actual recursively produced lists,
+jointly with their filter incidences, with at most $2^{o(n)}$ loss.
+All candidate counts include unsuccessful candidates. Claimed occupancy
+bounds can be enforced with subexponential overhead without losing an
+exponentially larger fraction of solutions than of ordinary states.
+
+For classical and QRACM search, the prescribed represented root survives
+with probability $2^{-o(n)}$ after the charged search. For QRAQM, the
+marked fraction of the product-subset space has rate $E$ derived from
+its root recurrence. Required source-pair/parent occurrence distortions
+are subexponential. These statements hold over fresh seeds for each
+input in a set of probability $1-o(1)$, so repetition on a fixed good
+input is permitted.
+\end{assumption}
+The survival clause is stronger than a first-moment calculation.
+The capacities checked below are necessary domain and prefix conditions;
+they do not by themselves prove survival or concentration.
+
+\begin{assumption}[Access, padding and output reporting]
+\label{ass:access}
+The actual indices and query trees support the operations used in the
+cost derivations with $2^{o(n)}$ overhead. Their candidate and padded
+bucket domains have the stated rates, including empty addresses and
+all unsuccessful candidates. Occurrence and canonical-address tests,
+output writes and deduplication have the costs charged below.
+Classical enumeration visits the actual incidence and candidate records.
+
+In the quantum models, controlled navigation and tests are reversible.
+For fixed static lists, all-output reporting and one-output search use
+Lemma~\ref{lem:tree-reporting}; index construction and output writes are
+charged separately. The actual tree size and accepted occurrence counts
+must have the rates supplied by the list/load assumption. The implicit
+QRACM routine additionally has the uniform padded occurrence states and
+success probabilities, or coherent estimates sufficient for the chosen
+amplification, needed to invoke Lemma~\ref{lem:amplitude-amplification}
+within the charged costs. Rank/select in complete buckets alone does
+not establish these preparation and padding properties.
+
+For QRAQM, source preparation, bottom matching and all-output setup
+must have a canonical coherent implementation on superposed source
+subsets, with the charged setup time and workspace. Reporting and
+measuring classical outputs alone would not provide that setup state.
+Quantum errors are reduced sufficiently for the complete algorithmic composition, with only $2^{o(n)}$ overhead;
+auxiliary storage is included in the charged bounds.
+\end{assumption}
+Lemma~\ref{lem:filter-access} supplies the typed cover, incidence
+navigation and static exact bucket access; Lemma~\ref{lem:tree-reporting}
+supplies the measured reporting bound for the resulting fixed tree.
+The classical indexing, sequential bucket scans and deduplication are supplied by the construction once their actual counts are given.
+The claimed sizes and output multiplicities for actual recursive lists,
+QRACM padded state preparations and QRAQM coherent canonical setup remain
+the corresponding assumptions above.
+
+\begin{assumption}[Coherent expected-update walk interface]
+\label{ass:updates}
+For the specified QRAQM profile, the maintained representation is a
+canonical function of the current source subsets. An exchange supports
+the clean controlled transition, inverse, root test and extraction
+operations required by a product-Johnson walk. The typed update costs
+used in Section~\ref{sec:qraqm} are valid as effective coherent costs
+under the actual conditioned states. With source-subset rate $H$,
+marked rate $E$ and charged effective-update rate $U$, detection and
+extraction have rate $(H-E)/2+U$, in addition to setup.
+Uncomputation, composition and error control add no exponential factor.
+Transition, marking and extraction have a hard workspace rate $w$ on
+every represented branch; the advertised bound requires $w\le C$.
+\end{assumption}
+The marked-mass and gap factors agree with Lemma~\ref{lem:mnrs} for fixed-cost coherent updates. The operational effective-update clause above is an additional quantum implementation hypothesis; that lemma does not establish it. An ordinary
+mean number of changed entries does not prove the coherent walk
+interface or its worst-branch workspace bound. The QRAQM theorem keeps
+it explicit; classical and QRACM search do not require it.
+
+\subsection{Finite profiles and verification}
+The supplementary verification software consists of three self-contained
+Python programs: \path{verify_classical.py}, \path{verify_qracm.py} and
+\path{verify_qraqm.py}. Each includes the complete exact rational
+probability laws and finite rate prescriptions for its model. The
+programs reconstruct the parent/child types and label couplings, check
+their exact normalization and marginal identities, and evaluate the
+entropy formulas with $100$-digit directed interval arithmetic.
+
+The resource checks include every source, recurrence, capacity, family,
+incidence, candidate, reporting and final search term in the corresponding
+analysis. The QRAQM program also checks the exact common-height
+prescription, the information identities and the source-domain and
+storage budgets. The three finite constructions are fixed inputs to
+these checks; reproducing the bounds requires no numerical optimization.
+The shorter decimal tables in the text give the scale of the resource
+bounds, while the exact embedded parameters and interval comparisons
+certify the strict inequalities.
+
+The mathematical arguments establish the three resource bounds from
+the stated algorithmic assumptions. The numerical checks establish the
+probability identities and resource inequalities for the chosen profiles.
+They do not establish the list/survival, access or coherent-update
+assumptions. In particular, proving the complete higher-level coherent
+update remains necessary for an unconditional QRAQM algorithm running in time and total space
+$2^{0.198n+o(n)}$.
+
+
+
+\section{Classical filtered representation trees}
+\label{sec:classical}
+The classical algorithm builds every list in a binary representation tree.
+At each merge a type filter reduces the pairs that must be tested, while
+modular constraints reduce the number of partial sums that are retained.
+Both costs are charged: the algorithm writes its filter incidences and
+visits every matching candidate, including candidates whose joint type
+is not useful.
+
+\subsection{Construction and complete merge cost}
+The tree has depth $D=7$ and digit alphabet
+$\mathcal A=\{-2,-1,0,1,2,3\}$. There are two equally sized coordinate
+classes. At the root their ordered useful-pair laws are transposes of one
+another. The two prescribed subtree profiles are exchanged between the
+classes in the opposite root subtree. Within a subtree, child exchange
+is coupled to a permutation of the five filter labels. Consequently every
+node at the same depth has the same whole-vector entropy rates, and
+$\alpha_j=\beta_j$. This statement concerns complete vectors: entropy
+rates are averaged across the classes before any resource maximum is
+taken. There is one shared modulus at each depth.
+
+Let $h_j$ be the entropy of a child type at depth $j$, and let $Q_j$ and
+$R_j$ denote the class-conditioned useful-pair law and its filter
+extension. Write
+\[
+ f_j=\HH(Q_j\mid W)-2h_j,\qquad
+ i_j=\kappa_j-\alpha_j=\kappa_j-\beta_j,\qquad
+ r_j=I(X;Y\mid Z,W).
+\]
+The actual marginal and sum laws in the two classes agree at every edge;
+entropy identities alone would not ensure this compatibility. The root
+sum type is binary with equal masses, so $h_0=1$.
+
+Put $c_0=1$, and let $c_j$ be the cumulative modular rate at depth $j$,
+with $1\ge c_1\ge\cdots\ge c_D\ge0$. Sibling residues are chosen so that
+their sum agrees with their parent's residue on the already imposed bits.
+A merge from depth $j$ then checks the additional rate
+$\Delta_j=c_{j-1}-c_j$. If each child list has rate $\ell_j$, the list/load
+contract gives
+\begin{equation}
+ \ell_{j-1}=2\ell_j-\Delta_j+f_j,\qquad \ell_0=0.
+ \label{classical:recurrence}
+\end{equation}
+The factor $2^{f_jn+o(n)}$ comes from exact joint-type counting; the modular
+factor for recursively generated lists is part of
+Assumption~\ref{ass:lists}.
+
+To build a bottom list, divide each coordinate class into two equal
+supports. Sample $2^{un+o(n)}$ vectors of the prescribed type on each
+support, and match their scalar products modulo $2^{c_Dn+o(n)}$.
+The source population on either support has entropy $h_D/2$, and
+\begin{equation}
+ \ell_D=2u-c_D,\qquad
+ u\le h_D/2,\qquad
+ \ell_j+c_j\le h_j\quad(1\le j\le D).
+ \label{classical:capacity}
+\end{equation}
+Under the source-load contract, a residue dictionary constructs this list
+in time and space $2^{\max\{u,\ell_D\}n+o(n)}$. Every bottom source and
+list is included; the constant number of tree positions changes no
+exponent.
+
+For an internal merge, Lemma~\ref{lem:filter-access} provides the
+class-conditioned cover and its incidence navigation. Conservatively
+constructing the entire family has rate $\kappa_j$. The two input-incidence
+tables each have rate $\ell_j+i_j$. Scan their modularly matching
+addresses and test the useful-pair predicate, reporting a useful pair at
+its first common filter address. The candidate-address rate is
+\begin{align}
+ 2\ell_j-\Delta_j+\kappa_j-\alpha_j-\beta_j
+ &=\ell_{j-1}-f_j+\kappa_j-\alpha_j-\beta_j\notag\\
+ &=\ell_{j-1}+r_j.
+ \label{classical:candidates}
+\end{align}
+The second equality is the information identity
+$\kappa_j-\alpha_j-\beta_j=f_j+r_j$.
+It includes candidates of the wrong useful type and repeated center
+addresses. Canonical address tests remove repeated center witnesses;
+coincident output vectors are deduplicated. Distinct-output sizes and
+candidate loads for these correlated lists still use the stated list,
+occurrence and access contracts.
+
+Input scans are bounded by the incidence tables since $i_j\ge0$, and
+output writes are bounded by the candidate term since $r_j\ge0$.
+Candidates can be processed sequentially. Thus all sources, stored lists,
+families, incidence writes and candidate tests are bounded by
+\begin{equation}
+ \tau_C=\max\left\{u,
+       \max_{1\le j\le D}
+          \{\kappa_j,\ell_j+i_j,\ell_{j-1}+r_j\}\right\}.
+ \label{classical:cost}
+\end{equation}
+This is both a time bound and a space bound for the construction, under
+Assumptions~\ref{ass:lists} and~\ref{ass:access}.
+
+\subsection{A finite classical construction}
+The exact useful and filter probabilities are embedded in
+\path{verify_classical.py}. The two class proportions are $1/2$, and the
+classwise sum and marginal identities hold over the rationals. The
+class-$L$ level-six filter and both level-seven filters have a constant
+label. In particular $i_7=0$ exactly. These laws and the following formulas
+define one finite construction; no limiting parameter choice is needed.
+
+Set
+\begin{align}
+ t_0&=\frac{1-h_4-\sum_{j=1}^{4}f_j+
+                         \sum_{j=1}^{4}i_j}{4},
+ &\delta&=10^{-6},
+ &t&=t_0+\delta/4,
+ \label{classical:time-profile}\\
+ \ell_j&=t-i_j\quad(1\le j\le7),
+ &c_1&=1-2\ell_1-f_1,
+ &c_j&=c_{j-1}+\ell_{j-1}-2\ell_j-f_j\quad(j\ge2),
+ \label{classical:rates-profile}\\
+ u&=(\ell_7+c_7)/2.
+ \label{classical:source-profile}
+\end{align}
+The interpretation is simple: every input-incidence table has the same
+rate $t$. The value of $t_0$ is chosen so that their common cost balances
+the capacity at depth four. Indeed summing the modulus recurrence gives
+\[
+ c_4=1-\sum_{j=1}^{3}\ell_j-2\ell_4-\sum_{j=1}^{4}f_j,
+ \qquad h_4-c_4-\ell_4=\delta.
+\]
+The same recurrence makes every merge count in
+\eqref{classical:recurrence} an exact identity, including the root count.
+There are no separately tuned list heights or modulus rates.
+
+\begin{center}\small
+\begin{tabular}{@{}crrr@{}}\toprule
+Depth $j$ & List rate $\ell_j$ & Modulus rate $c_j$ & Candidate rate\\\midrule
+1 & 0.211967423269 & 0.999982060603 & 0.263380572935\\
+2 & 0.186940098937 & 0.999980726081 & 0.263382504052\\
+3 & 0.196177821947 & 0.999976521029 & 0.263383204185\\
+4 & 0.203067064704 & 0.956415994747 & 0.263383440534\\
+5 & 0.236032087788 & 0.778104141382 & 0.263372923914\\
+6 & 0.258822538842 & 0.526748054134 & 0.263377914550\\
+7 & 0.263383502113 & 0.263351278992 & 0.263370229084\\\bottomrule
+\end{tabular}
+\end{center}
+The table is display rounding only. Evaluation of the exact laws gives
+\begin{align*}
+ t_0&=0.2633832521129001557945171803\ldots,\\
+ t&=0.2633835021129001557945171803\ldots,\qquad
+ u=0.263367390552\ldots .
+\end{align*}
+Directed-interval verification checks nonnegative list rates, all modulus
+bounds and nesting, the leaf-domain bound, every capacity in
+\eqref{classical:capacity}, and every family and candidate term in
+\eqref{classical:cost}. The capacities and modulus gaps have fixed positive
+reserves; their minimum is at least $10^{-6}$. Every incidence rate is
+exactly $t$, and all remaining charged costs are at most $t$. The strict
+gap to $0.26339$ exceeds $6.4978\cdot10^{-6}$. The exact probability tables,
+coefficient identities and outward-rounded interval comparisons are
+checked by the verification program; printed decimal truncation is not
+used as a certificate.
+
+\begin{proof}[Proof of Theorem~\ref{thm:classical}]
+The exact type-flow checks give a compatible whole-vector representation
+tree, and \eqref{classical:rates-profile} gives valid nested modular
+constraints and the list recurrences. The capacities ensure that no
+modeled list exceeds its underlying type domain. The source construction
+and the merge analysis leading to \eqref{classical:cost} account for all
+work and persistent storage; their maximum is at most
+$t<0.26339$.
+
+To identify the survival calculation used by the list contract, put
+$s_j=\ell_j+c_j-h_j$ and
+$\rho_j=\HH(Q_j\mid W)-h_{j-1}$. Type compatibility and the recurrences
+imply
+\[
+ s_D=2u-h_D,\qquad s_{j-1}=\rho_j-c_j+2s_j.
+\]
+All $s_j$ are nonpositive by the checked capacities, and $s_0=0$.
+Thus the corresponding capped reference recursion has root inclusion
+rate zero. Assumption~\ref{ass:lists} is used here to transfer that
+survival calculation to the actual correlated recursive lists, giving
+success $2^{-o(n)}$ on its good-input set. Fresh-seed repetition yields
+constant success without changing the exponent. Every reported root is
+checked to be binary and to satisfy the target equation. The entropy
+identities and capacity checks establish the stated accounting; they do
+not themselves prove the survival or modular-load assumption.
+\end{proof}
+
+
+
+\section{Quantum search with classical memory}
+\label{sec:qracm}
+
+The QRACM algorithm stores one side of each search classically and
+generates the other side coherently.  Only a single root-to-leaf path is
+implicit.  Its sibling subtrees are constructed once, after which nested
+amplitude amplification searches the path.  Every stored merge must
+report all its outputs; only the implicit path uses state preparation.
+
+\subsection{The tree and its sources}
+Use a binary tree of fixed depth $D$, indexed from root $0$, with children
+$v_L=2v+1$ and $v_R=2v+2$.  Write
+\[
+ \mathcal P=\{0,1,3,\ldots,2^D-1\},\qquad b_\star=2^D-1.
+\]
+All positive-depth nodes outside $\mathcal P$ are stored.  The classwise
+ordered law $Q_v(X,Y\mid W)$ specifies the useful pairs at an internal
+node: its marginals are the child types and its sum law is the parent
+type.  Let
+\[
+ h_v=H(P_v\mid W),\qquad
+ f_v=H(Q_v\mid W)-h_{v_L}-h_{v_R}.
+\]
+A list at $v$ has rate $\ell_v\ge0$ and cumulative modular rate
+$0\le c_v\le1$.
+Siblings have equal moduli.  With $c_0=1$, $\ell_0=0$ and
+$\Delta_v=c_v-c_{v_L}\ge0$, the required rates satisfy
+\begin{align}
+ \ell_v&=\ell_{v_L}+\ell_{v_R}-\Delta_v+f_v,
+ \label{qracm:recurrence}\\
+ \ell_v+c_v&\le h_v\quad(v>0),&
+ \ell_{b_\star}+c_{b_\star}&=h_{b_\star}.
+ \label{qracm:capacity}
+\end{align}
+The recurrence combines the exact type-counting exponent $f_v$ with the
+modular-load hypothesis.  The capacities are imposed at implicit nodes
+as well as stored nodes: a full bottom source alone does not guarantee
+that a represented solution has a sufficiently likely earlier prefix.
+
+For every stored bottom list, split each coordinate class into equal
+complementary supports.  Sample and store a uniform subset of rate
+$(\ell_v+c_v)/2$ from each half-type domain, using ordinary type ranking
+and classical dictionaries.  The capacity in \eqref{qracm:capacity}
+ensures that the requested subsets fit their domains.  Index the two
+tables by residue and report all matching pairs; their cost is the
+maximum of the source and output rates under the modular-load condition.
+For
+the implicit bottom source, use support fraction $\rho=1/3$ for the
+stored right domain, of rate
+\[
+ b=\rho h_{b_\star}.
+\]
+Prepare the complementary source uniformly and query this right
+dictionary.  The support cells carry their prescribed marginal types;
+they are not unrestricted global type classes.  Under the actual bucket
+padding and modular-load conditions, Lemma~\ref{lem:amplitude-amplification} applied to the
+bottom modular equation prepares a uniform occurrence state in time
+$2^{g_{b_\star}n+o(n)}$, where
+\begin{equation}
+ g_{b_\star}=\tfrac12[c_{b_\star}-b]_+.
+ \label{qracm:bottom-generator}
+\end{equation}
+Indeed the padded right bucket has rate $[b-c_{b_\star}]_+$, and the
+marked fraction has rate $-[c_{b_\star}-b]_+$.  The construction and
+storage of the full right source, of rate $b$, are also charged.
+
+\subsection{Stored merges and implicit amplification}
+At node $v$ let $\alpha_v,\beta_v,\kappa_v$ be the filter information
+rates from Lemma~\ref{lem:filter-access}.  Query addresses use $XZ$;
+the stored data dictionary uses $YZ$.  Its incidence rate is
+$\ell_{v_R}+\kappa_v-\beta_v$.  The complete candidate tree for a stored
+merge has rate
+\begin{equation}
+ C_v=\max\{\ell_{v_L}+\kappa_v-\alpha_v,
+ \ell_{v_L}+\ell_{v_R}-\Delta_v+
+               \kappa_v-\alpha_v-\beta_v\}.
+ \label{qracm:candidates}
+\end{equation}
+The first term counts query addresses, including empty buckets; the
+second counts every modular candidate, including wrong useful types.
+Mark a useful pair only at its first common filter address.  The
+occurrence hypothesis bounds the number of distinct pairs representing
+one output vector by $2^{o(n)}$.  Consequently the number to report has
+rate $\ell_v$. Lemma~\ref{lem:tree-reporting}, applied to the fixed static candidate tree, therefore gives all-output reporting cost
+$2^{(C_v+\ell_v)n/2+o(n)}$.  The output vectors are measured and inserted
+into a classical dictionary.  Input scans, output writes, data-incidence
+writes and the covering-family charge give the complete stored-merge
+rate
+\begin{equation}
+ s_v=\max\{\ell_{v_L},\ell_{v_R},\ell_v,\kappa_v,
+       \ell_{v_R}+\kappa_v-\beta_v,(C_v+\ell_v)/2\}.
+ \label{qracm:stored-cost}
+\end{equation}
+The output term is essential: charging only the search for one useful
+pair would not construct the stored subtree.
+
+Along the implicit path, assume the left child is already prepared
+uniformly over its occurrence addresses, with cost exponent $g_{v_L}$.
+For each incoming occurrence use the same padded rectangle of query
+addresses and right-bucket slots, of rate
+\[
+ \chi_v=\max\{\kappa_v-\alpha_v,
+       \ell_{v_R}-\Delta_v+\kappa_v-\alpha_v-\beta_v\}.
+\]
+The useful partner count per incoming occurrence has modeled average
+rate $\lambda_v=\ell_{v_R}-\Delta_v+f_v$.  Thus the accepted fraction
+has rate $\lambda_v-\chi_v$, and Lemma~\ref{lem:amplitude-amplification}, under the stated preparation interface, gives
+\begin{equation}
+ g_v=g_{v_L}+\tfrac12\max\{
+   \kappa_v-\alpha_v-\ell_{v_R}+\Delta_v-f_v,
+   \kappa_v-\alpha_v-\beta_v-f_v\}.
+ \label{qracm:generator}
+\end{equation}
+The increment is nonnegative, since its second term is
+$I(X;Y\mid Z,W)\ge0$.  Canonical filter addresses remove repeated
+filter witnesses.  Other source-pair occurrences remain in the state;
+the occurrence and survival conditions in Assumptions~\ref{ass:lists}
+and~\ref{ass:access} apply to these actual states.  They cannot be
+replaced by a calculation for independent random list entries.
+
+The algorithm now has four steps: construct the stored bottom lists;
+construct their stored ancestors using \eqref{qracm:stored-cost}; build
+the right data indices along $\mathcal P$; and apply
+\eqref{qracm:bottom-generator} and \eqref{qracm:generator} from the bottom
+to the root.  Measure a root occurrence and verify its binary coordinates
+and target sum.  The list/survival condition justifies the prescribed
+subexponential repetitions over public seeds.
+
+Let $\mathcal S$ be the stored nodes and $\mathcal B$ the stored bottom
+nodes; a superscript $\circ$ restricts a set to its internal nodes.
+The complete static construction and storage rate is bounded by
+\begin{align}
+ \sigma=\max\biggl\{&b,\ \max_{v\in\mathcal S}\ell_v,
+          \max_{v\in\mathcal B}(\ell_v+c_v)/2,\notag\\
+       &\max_{v\in\mathcal S^\circ}s_v,
+          \max_{v\in\mathcal P^\circ}
+          \{\kappa_v,\ell_{v_R}+\kappa_v-\beta_v\}\biggr\}.
+ \label{qracm:setup}
+\end{align}
+The root filter is constant, so including its last two terms adds only
+an already stored raw list.  Reporting workspace is included in its
+charged setup cost.  Implicit state preparation retains a constant-depth
+stack of addresses and vectors, rather than an exponential quantum list;
+the reversible-access condition bounds its auxiliary overhead by
+$2^{o(n)}$.  Hence the time and total-space rates are at most
+$\max\{\sigma,g_0\}$ and $\sigma$, respectively.
+
+\subsection{The finite profile and the constant}
+\begin{proof}[Proof of Theorem~\ref{thm:qracm}]
+Use the rational probability laws and rates embedded in
+\path{verify_qracm.py}.  They have $D=4$, alphabet
+$\{-1,0,1,2\}$, three filter labels and two equal coordinate classes.
+The implicit path is $\{0,1,3,7,15\}$.  All fifteen stored bottom lists
+have the exactly common rational rate
+\[
+ \ell_v=1123259302947/5349021095909
+       =0.20999343296777855938\ldots .
+\]
+The root filter and filters at nodes $7,\ldots,14$ are constant.
+The program includes every remaining rational child modulus.  The full-source identity and
+root recurrence determine the missing implicit bottom rate and root
+child modulus; the other list rates follow bottom-up from
+\eqref{qracm:recurrence}.  Exact rational checks verify normalization,
+every classwise marginal and sum law, and every label law.
+
+Directed interval evaluation checks \eqref{qracm:capacity}, modulus
+nesting, nonnegative rates and every term of
+\eqref{qracm:stored-cost}--\eqref{qracm:setup}, including all eleven
+stored internal merges and fifteen stored source constructions.
+The principal resource bounds, rounded upwards for display, are
+\begin{center}\small
+\begin{tabular}{@{}lr@{}}\toprule
+Resource & Rate upper bound\\\midrule
+Implicit right-source construction & $0.169265570008$\\
+Largest stored bottom-source construction & $0.209993773632$\\
+Largest stored raw list & $0.209993432968$\\
+Largest data-incidence index & $0.209994407551$\\
+Largest all-output report & $0.209994407551$\\
+Complete implicit root preparation & $0.209994407550$\\\bottomrule
+\end{tabular}
+\end{center}
+The complete, unrounded maxima satisfy
+\[
+ \sigma,\max\{\sigma,g_0\}<0.209994407550290<0.2099947,
+\]
+with minimum strict target margin greater than
+$2.9244971095\cdot10^{-7}$.  The program reconstructs the full resource expressions directly from
+the ordered rational laws.  Applying the construction and amplification analysis
+above proves the stated conditional bounds.  These arithmetic checks
+certify the chosen profile; its recursive-list, actual-padding,
+occurrence and survival conditions are precisely the stated assumptions.
+\end{proof}
+
+
+
+\section{A quantum-memory walk with one list height}
+\label{sec:qraqm}
+
+The QRAQM algorithm maintains a representation tree while a quantum walk
+changes its sampled sources. Its useful simplification is that every
+positive-depth list has the same size exponent. Its directed filters also
+distinguish writes from searches: an entry is stored under its data
+incidences, while its query incidences are generated coherently when
+needed. This distinction gives the update costs below. The complete
+coherent update, including propagation through dependent lists, remains
+the additional premise in Assumption~\ref{ass:updates}.
+
+\subsection{Sources and maintained lists}
+
+Use a binary tree of depth $D$. There are two equally sized coordinate
+classes. An ordered root law $Q_1$ has a balanced binary sum marginal;
+its transpose is used in the other class. Below the root, two prototype
+profiles are exchanged between the classes in the two root subtrees.
+Within either prototype, the useful law $Q_j(X,Y)$ has equal child
+marginals $P_j$ and sum marginal $P_{j-1}$. Its filter law extends this
+useful law to $R_j(X,Y,Z)$. Thus all marginal and sum identities hold
+separately in each class. All entries are complete vectors; there is no
+separate algorithm on either class. Write
+\[
+ h_j=\HH(P_j\mid W),\qquad
+ f_j=\HH(X,Y\mid W)-\HH(X\mid W)-\HH(Y\mid W).
+\]
+Here $f_1$ uses the ordered root law. For $j\ge2$, the displayed
+quantities average the two prototype laws with equal weights.
+
+Let $c_0=1$ be the target-modulus rate and let $c_j$ be the cumulative
+modular rate at depth $j$. Put $\ell_j=H$ at every positive depth and
+write $E=\ell_0$ for the root-completion exponent. The list model is
+\begin{equation}
+ E=2H-1+c_1+f_1,\qquad
+ H=2H-c_{j-1}+c_j+f_j\quad(2\le j\le D).
+ \label{qraqm:recurrence}
+\end{equation}
+Type counting gives the useful-pair factor $2^{f_jn+o(n)}$; the modular
+factor in this recurrence for dependent lists uses
+Assumption~\ref{ass:lists}. The finite profile must satisfy
+\begin{equation}
+ 1\ge c_1\ge\cdots\ge c_D\ge0,\quad H>0,\quad E\le0,
+ \qquad H+c_j-E/2^j\le h_j\quad(1\le j\le D).
+ \label{qraqm:capacities}
+\end{equation}
+The last inequalities are the reverse-prefix capacities; they do not
+by themselves establish survival of a prescribed root representation.
+
+At each bottom position, split the support in proportion
+$\rho=c_D/h_D$ within each coordinate class. Enumerate the complete
+right-source type domain, of rate $c_D$, and index it by its modular
+residue. Its complementary left domain has rate
+$\eta=h_D-c_D$. A walk vertex chooses an independent uniform subset
+of $m=2^{Hn+o(n)}$ left restrictions at each bottom position. Matching
+the selected restrictions with the right source gives the modeled
+bottom lists. The profile has $\eta>H$, as required for these subsets.
+The fixed right tables cost $2^{c_Dn+o(n)}$; explicitly allowing the
+full left domain as a carrier costs $2^{\eta n+o(n)}$. Both charges are
+included below. Source preparation, matching and canonical access use
+Assumption~\ref{ass:access}; the complete source exchanges and propagated
+changes use Assumption~\ref{ass:updates}.
+
+\subsection{Setup and update costs}
+
+At a filtered merge, let $X$ be a query entry and $Y$ a data entry. Put
+\[
+ \alpha_j=I(X;Z\mid W),\quad \beta_j=I(Y;Z\mid W),\quad
+ \kappa_j=I(XY;Z\mid W),
+\]
+and use the equivalent information quantities
+\[
+ d_j=I(X;Z\mid Y,W),\qquad q_j=I(Y;Z\mid X,W),\qquad
+ r_j=I(X;Y\mid Z,W).
+\]
+The chain rules give
+\begin{equation}
+ d_j=\kappa_j-\beta_j,\qquad
+ q_j=\kappa_j-\alpha_j,\qquad
+ \kappa_j-\alpha_j-\beta_j=r_j+f_j.
+ \label{qraqm:information}
+\end{equation}
+Lemma~\ref{lem:filter-access} supplies a data-incidence index of rate
+$H+d_j$ and $2^{q_jn+o(n)}$ query addresses per entry. Both sibling
+lists have data indices; neither stores an additional query-side index.
+When either sibling changes, its changed entry can play the query role
+because the useful law is symmetric within each class. The filter must
+cover both ordered orientations. A pair key is always tied to the two
+tree positions, so reversed queries update the same parent occurrence.
+
+The fresh modular rate is
+$\Delta_j=c_{j-1}-c_j=H+f_j$. Hence the complete setup candidate tree has
+rate
+\[
+ \chi_j=\max\{H+\kappa_j-\alpha_j,
+       2H-\Delta_j+\kappa_j-\alpha_j-\beta_j\}
+       =H+\max\{q_j,r_j\}.
+\]
+The first term charges empty query addresses, and the second charges
+all bucket candidates, including candidates rejected by the useful-type
+test. For fixed static lists, Lemma~\ref{lem:tree-reporting} reports all $2^{Hn+o(n)}$ parent occurrences at cost
+$2^{(\chi_j+H)n/2+o(n)}$. The walk requires this construction coherently
+with canonical outputs under Assumption~\ref{ass:access}; ordinary
+quantum enumeration followed by measurements would not supply its setup
+state. Including the family construction,
+incidence writes and output storage, the setup rate at this merge is
+therefore
+\begin{equation}
+ \max\{\kappa_j,H+d_j,H,H+q_j/2,H+r_j/2\}.
+ \label{qraqm:merge-setup}
+\end{equation}
+The family charge $\kappa_j$ is retained for both time and storage.
+Canonical first-common-address tests remove repeated filter witnesses.
+They do not remove multiple source pairs for one parent vector; that
+multiplicity is covered by the occurrence part of
+Assumption~\ref{ass:lists}. Parent representation counts must be maintained
+so that deleting one pair does not delete a still-represented vector.
+
+For one changed entry, writing its data incidences has rate $d_j$ and
+searching its candidate tree has rate $\max\{0,q_j,r_j\}/2$. This motivates
+the internal update bound
+\[
+ B=\max_{2\le j\le D}\{0,d_j,q_j/2,r_j/2\}.
+\]
+There is no output-growth exponent in this expression because parent
+and child heights are equal. Its use for a complete coherent update
+requires Assumption~\ref{ass:updates}; an average degree at an isolated
+merge is insufficient. The root is unfiltered. A reverse root query tests the transpose of the
+ordered root law; averaging over coordinate classes does not make that
+predicate symmetric. Its one-solution setup cost is the maximum of $H/2$ and $(2H-1+c_1)/2$, and its update
+candidate rate is $(H-1+c_1)/2$, with a zero floor.
+
+Writing $K=\max_{2\le j\le D}\kappa_j$, the complete setup and persistent
+storage rates are consequently bounded by
+\begin{align}
+ \sigma&=\max\{c_D,\eta,K,H+B,(E-f_1)/2\},
+       \label{qraqm:setup}\\
+ \mu&=\max\{c_D,\eta,H,K,\max_{j\ge2}(H+d_j)\}\le\sigma.
+       \label{qraqm:storage}
+\end{align}
+Setup workspace is charged to $\sigma$ by the access contract. A valid
+declared update rate must satisfy
+\begin{equation}
+ U\ge B,\qquad U\ge(H-1+c_1)/2.
+ \label{qraqm:update}
+\end{equation}
+At the root, a reverse query tests the transposed ordered root law;
+averaging the coordinate classes does not make that predicate symmetric.
+
+\subsection{The finite profile and the walk bound}
+
+The exact rational laws embedded in \path{verify_qraqm.py} use $D=9$,
+alphabet
+$\{-2,-1,0,1,2\}$ and three filter labels. Filters at levels six through
+nine are constant; their ordinary useful-pair constraints remain in place.
+Define
+\begin{align*}
+ L_0&=-f_2=0.16360358795774631025\ldots,\\
+ U_0&=d_2=0.03439616742177458384\ldots,\\
+ T_0&=\kappa_3=0.19799975538308076878\ldots,
+ \qquad \delta=2^{-26},
+\end{align*}
+and set
+\begin{equation}
+ \begin{split}
+ H&=L_0+\delta,\qquad E=-L_0-2\delta,\qquad U=U_0+\delta,\\
+ c_j&=1-(j+2)L_0-\sum_{i=1}^{j}f_i-(j+3)\delta,\qquad
+ C=T_0+3\delta.
+ \end{split}
+ \label{qraqm:finite-rates}
+\end{equation}
+These formulas impose \eqref{qraqm:recurrence} exactly. In particular
+$c_1-c_2=\delta$, so even this otherwise tight modulus increment is
+strictly positive. No list height or modulus is an independently chosen
+resource parameter.
+
+The exact type flows, label laws and coefficient identities are checked
+over the rationals. Directed interval evaluation of their entropy
+expressions verifies every inequality in
+\eqref{qraqm:capacities} and~\eqref{qraqm:update}, together with
+$C\ge\sigma$ and $C\ge(H-E)/2+U$. The minimum nonstructural resource
+slack exceeds $7.45414\cdot10^{-9}$. The following conservative rounded
+bounds show the resulting scale; the exact formulas define the point.
+\begin{center}\small
+\begin{tabular}{@{}lr@{}}\toprule
+Quantity & Upper bound\\\midrule
+Fixed right source $c_D$ & $0.197999576479$\\
+Full left carrier $\eta$ & $0.163923305055$\\
+Setup and persistent storage $\sigma,\mu$ & $0.197999770281$\\
+Declared walk budget $(H-E)/2+U$ & $0.197999792633$\\
+Total declared rate $C$ & $0.197999800087$\\\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{proof}[Proof of Theorem~\ref{thm:qraqm}]
+Construct the fixed source tables and the canonical representation tree,
+including the data-incidence indices and all parent lists. The preceding
+cost derivation gives setup exponent $\sigma$ and persistent storage
+exponent $\mu$. All sources and merges are counted; the tree has a fixed
+number of positions.
+
+The graph is the product of the Johnson graphs on the sampled left
+restrictions. Since $\eta>H>0$, Lemma~\ref{lem:johnson-gap} gives inverse spectral-gap exponent $H$.
+Augmenting a vertex by a canonical function of its source sets does not
+change this graph. The list/survival contract gives marked mass
+$2^{En+o(n)}$ for the prescribed root completion.
+
+Apply the operational coherent-update interface of
+Assumption~\ref{ass:updates}, with effective update rate $U$. Its detection
+and extraction guarantee has the inverse-square-root marked-mass and
+spectral-gap scaling, including coherent controls and sufficiently small
+composed error. The resulting walk exponent is $(H-E)/2+U$.
+This step uses that full interface, not just a classical mean update
+cost. Thus time is bounded by
+$2^{\max\{\sigma,(H-E)/2+U\}n+o(n)}$. Setup workspace, persistent
+storage and hard walk workspace give total space at most
+$2^{\max\{\sigma,\mu,w\}n+o(n)}$. The finite interval checks bound both
+maxima by $C<0.198$. The stipulated good-input survival and permitted
+fresh-seed repetitions give constant success without changing an exponent.
+The output is extracted and checked against the binary target equation.
+Any $2^{o(n)}$ type-balancing or fresh-seed repetition allowed by the
+list/survival contract is absorbed in the displayed bounds.
+\end{proof}
+
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\appendix
+
+\section{Use of artificial intelligence}
+ChatGPT was used extensively in developing this work, including
+mathematical exploration, numerical calculations, and preparation and
+revision of the manuscript. The authors take responsibility for the
+mathematical claims, computations, references and final text.
+
+
+\end{document}
